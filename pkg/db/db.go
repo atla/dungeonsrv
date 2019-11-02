@@ -11,20 +11,22 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-const (
-	database = "dungeonsrv"
-)
-
 // Client database
 type Client struct {
 	client    *mongo.Client
 	Connected bool
+	Database  string
 }
 
 // New creates a new Client object
 func New() *Client {
+
+	//TODO: read from environment variables or .env file
+	database := "dsrv_lotd"
+
 	return &Client{
 		Connected: false,
+		Database:  database,
 	}
 }
 
@@ -42,7 +44,7 @@ func (dba *Client) Close() error {
 
 //C opens a given collection in the xdcc database
 func (dba *Client) C(coll string) *mongo.Collection {
-	return dba.client.Database(database).Collection(coll)
+	return dba.client.Database(dba.Database).Collection(coll)
 }
 
 //FindAll returns all entities of a given collection
@@ -86,7 +88,7 @@ func (dba *Client) DeleteByID(coll string, id string) (*mongo.DeleteResult, erro
 
 //InsertOne inserts one document
 func (dba *Client) InsertOne(coll string, data interface{}) (*mongo.InsertOneResult, error) {
-	return dba.client.Database(database).Collection(coll).InsertOne(context.TODO(), data)
+	return dba.client.Database(dba.Database).Collection(coll).InsertOne(context.TODO(), data)
 }
 
 //UpdateOne inserts one document
@@ -94,7 +96,7 @@ func (dba *Client) UpdateOne(coll string, key string, value string, data interfa
 	filter := bson.M{key: value}
 	update := bson.M{"$set": data}
 
-	return dba.client.Database(database).Collection(coll).UpdateOne(context.TODO(), filter, update)
+	return dba.client.Database(dba.Database).Collection(coll).UpdateOne(context.TODO(), filter, update)
 }
 
 //UpdateOneByID inserts one document
@@ -102,7 +104,7 @@ func (dba *Client) UpdateOneByID(coll string, id primitive.ObjectID, data interf
 	filter := bson.M{"_id": id}
 	update := bson.M{"$set": data}
 
-	return dba.client.Database(database).Collection(coll).UpdateOne(context.TODO(), filter, update)
+	return dba.client.Database(dba.Database).Collection(coll).UpdateOne(context.TODO(), filter, update)
 }
 
 //Connect Connects to the xdcc database
