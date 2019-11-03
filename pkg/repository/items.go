@@ -9,8 +9,3 @@ type ItemsRepository interface {
 	Store(item *entities.Item) (*entities.Item, error)
 	Update(item *entities.Item) error
 }
-
-//ItemsTemplateRepository repository interface
-type ItemsTemplateRepository interface {
-	FindAll() ([]*entities.ItemTemplate, error)
-}

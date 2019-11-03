@@ -8,22 +8,10 @@ import (
 	"time"
 
 	"github.com/atla/dungeonsrv/pkg/db"
-	"github.com/atla/dungeonsrv/pkg/repository"
 
 	"github.com/atla/dungeonsrv/pkg/service"
 	"github.com/gorilla/mux"
 )
-
-// Route ... contains data to declare a route
-type Route struct {
-	Name        string
-	Method      string
-	Pattern     string
-	HandlerFunc http.HandlerFunc
-}
-
-// Routes ... type to hold multiple routes
-type Routes []Route
 
 // App ... main application structure
 type App interface {
@@ -31,10 +19,27 @@ type App interface {
 }
 
 type app struct {
+
+	// generic app base
 	Router *mux.Router
 	routes Routes
 	db     *db.Client
+
+	// dungeonsrv specific
+	dungeonDataDir string
+	facade         service.Facade
 }
+
+// Route ... contains data to declare a route
+type Route struct {
+	Pattern     string
+	Method      string
+	Name        string
+	HandlerFunc http.HandlerFunc
+}
+
+// Routes ... type to hold multiple routes
+type Routes []Route
 
 //HTTPResponder serves method to respond to http calls
 type HTTPResponder interface {
@@ -44,11 +49,15 @@ type HTTPResponder interface {
 
 // NewApp returns an application instance
 // this is the primary stateless server providing an API interface
-func NewApp() App {
-	return &app{
-		db: db.New(),
+func NewApp(dungeonDataDir string) App {
+	app := &app{
+		db:             db.New(),
+		dungeonDataDir: dungeonDataDir,
 	}
 
+	app.facade = service.NewFacade(app.db, dungeonDataDir)
+
+	return app
 }
 
 // JSON responds to the request with the given code and payload
@@ -89,29 +98,18 @@ func Logger(inner http.Handler, name string) http.Handler {
 // SetupRoutes ... Configures the routes
 func (app *app) setupRoutes() {
 
-	itemRepository := repository.NewMongoItemsRepository(app.db)
-	itemsService := service.NewItemsService(itemRepository)
-	itemHandler := NewItemHandler(itemsService, app)
+	itemHandler := NewItemHandler(app.facade.ItemsService(), app)
+	itemTemplateHandler := NewItemTemplatesHandler(app.facade.ItemTemplatesService(), app)
 
 	app.routes = Routes{
-		Route{
-			"Get all items",
-			"GET",
-			"/api/items",
-			itemHandler.GetItems,
-		},
-		Route{
-			"Get a single item",
-			"GET",
-			"/api/items/{id}",
-			itemHandler.GetItemByID,
-		},
-		Route{
-			"Create a new item",
-			"POST",
-			"/api/items",
-			itemHandler.PostItem,
-		},
+		//items
+		Route{"/api/items", "GET", "Get all items", itemHandler.GetItems},
+		Route{"/api/items/{id}", "GET", "Get a single item", itemHandler.GetItemByID},
+		Route{"/api/items", "POST", "Create a new item", itemHandler.PostItem},
+
+		//itemTemplates
+		Route{"/api/itemTemplates", "GET", "Get all itemTemplates", itemTemplateHandler.GetItemTemplates},
+		Route{"/api/itemTemplates/{templateID}", "GET", "Get a single itemTemplate by templateID", itemTemplateHandler.GetItemTemplateByTemplateID},
 	}
 
 	// wrap all routes in logger

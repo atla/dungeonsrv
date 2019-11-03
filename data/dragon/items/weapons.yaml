@@ -1,0 +1,49 @@
+# Item Template Database
+# Item Types currency = 0, consumable=1, armor=2, weapon=3, collectible=4
+- templateID: "sword_001"
+  name: "Rusty Edge"
+  description: "A very rusty edge"
+  itemType: 3
+  properties:
+    range: 1
+    damage: 1.5
+    rarity: "normal"
+    damageType: physical
+    merchantPrice: 2
+    resellPrice: 1
+
+- templateID: "sword_002"
+  name: "Broadsword"
+  description: "A heavy broadsword"
+  itemType: 3
+  properties:
+    rarity: "normal"
+    range: 2
+    damage: 4
+    damageType: physical
+    merchantPrice: 5
+    resellPrice: 3
+
+- templateID: "bow_001"
+  name: "Basic Bow"
+  description: "A bow"
+  itemType: 3
+  properties:
+    rarity: "normal"
+    range: 15
+    damage: 1.5
+    damageType: physical
+    merchantPrice: 5
+    resellPrice: 3
+
+- templateID: "bow_002"
+  name: "Ice Bow"
+  description: "An elemental ice bow"
+  itemType: 3
+  properties:
+    rarity: "rare"
+    range: 16
+    damage: 2.1
+    damageType: "ice"
+    merchantPrice: 15
+    resellPrice: 8

@@ -56,16 +56,19 @@ func (dba *Client) FindAll(coll string) (*mongo.Cursor, error) {
 //Find returns all entities of a given collection
 func (dba *Client) Find(coll string, key string, value string) (*mongo.Cursor, error) {
 	findFilter := bson.D{{key, value}}
-
-	// findFilter2 := bson.D{{
-	// 	key,
-	// 	bson.D{{
-	// 		"$in",
-	// 		bson.E{value}
-	// 	}}
-	// }}
-
 	return dba.C(coll).Find(context.TODO(), findFilter)
+}
+
+//DeleteAll returns all entities of a given collection
+func (dba *Client) DeleteAll(coll string) (*mongo.DeleteResult, error) {
+	findFilter := bson.D{}
+	return dba.C(coll).DeleteMany(context.TODO(), findFilter)
+}
+
+//Delete returns all entities of a given collection
+func (dba *Client) Delete(coll string, key string, value string) (*mongo.DeleteResult, error) {
+	findFilter := bson.D{{key, value}}
+	return dba.C(coll).DeleteMany(context.TODO(), findFilter)
 }
 
 //FindOne returns all entities of a given collection
