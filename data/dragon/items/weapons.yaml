@@ -5,12 +5,29 @@
   description: "A very rusty edge"
   itemType: 3
   properties:
-    range: 1
-    damage: 1.5
     rarity: "normal"
     damageType: physical
     merchantPrice: 2
     resellPrice: 1
+  attributes:
+    damage: 1.5
+    strength: 2
+    range: 1
+
+- templateID: "cutlass_001"
+  name: "Rust Cutlass"
+  description: "A very rusty pirates sword. Once belonged to the great $1"
+  itemType: 3
+  properties:
+    rarity: "normal"
+    damageType: physical
+    merchantPrice: -1
+    resellPrice: 2
+  attributes:
+    damage: 3
+    strength: 3
+    dexterity: 2
+    range: 1.2
 
 - templateID: "sword_002"
   name: "Broadsword"
@@ -18,11 +35,13 @@
   itemType: 3
   properties:
     rarity: "normal"
-    range: 2
-    damage: 4
     damageType: physical
     merchantPrice: 5
     resellPrice: 3
+  attributes:
+    range: 2
+    damage: 4
+    strength: 3
 
 - templateID: "bow_001"
   name: "Basic Bow"
@@ -30,11 +49,13 @@
   itemType: 3
   properties:
     rarity: "normal"
-    range: 15
-    damage: 1.5
     damageType: physical
     merchantPrice: 5
     resellPrice: 3
+  attributes:
+    range: 15
+    damage: 2
+    dexterity: 3
 
 - templateID: "bow_002"
   name: "Ice Bow"
@@ -42,8 +63,10 @@
   itemType: 3
   properties:
     rarity: "rare"
-    range: 16
-    damage: 2.1
     damageType: "ice"
     merchantPrice: 15
     resellPrice: 8
+  attributes:
+    range: 16
+    damage: 4
+    dexterity: 3

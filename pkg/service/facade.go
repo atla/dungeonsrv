@@ -25,7 +25,7 @@ func NewFacade(db *db.Client, dungeonDataDir string) Facade {
 	itemTemplatesRepo := repository.NewItemTemplatesRepository(dungeonDataDir)
 
 	return &facade{
-		is:  NewItemsService(itemsRepo),
+		is:  NewItemsService(itemsRepo, itemTemplatesRepo),
 		its: NewItemTemplatesService(itemTemplatesRepo),
 	}
 }

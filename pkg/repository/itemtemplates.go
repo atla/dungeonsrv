@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"errors"
 	"io/ioutil"
 
 	"github.com/atla/dungeonsrv/pkg/entities"
@@ -10,16 +11,17 @@ import (
 
 //ItemTemplatesRepository repository interface
 type ItemTemplatesRepository interface {
-	FindAll() ([]*entities.Item, error)
-	FindByTemplateID(templateID string) (*entities.Item, error)
+	FindAll() ([]entities.ItemTemplate, error)
+	FindByTemplateID(templateID string) (*entities.ItemTemplate, error)
 }
 
 const (
-	itemsSubfolder = "/items"
+	itemsSubfolder = "/items/"
 )
 
 type itemTemplatesRepository struct {
 	dungeonDataDir string
+	itemTemplates  []entities.ItemTemplate
 }
 
 //NewItemTemplatesRepository creates a new itemTemplatesRepository
@@ -32,33 +34,50 @@ func NewItemTemplatesRepository(dungeonDataDir string) ItemTemplatesRepository {
 	armor := itr.loadItemTemplates("armor.yaml")
 
 	// load all item templates into memory
-	allItemTemplates := []*entities.ItemTemplate{}
+	allItemTemplates := []entities.ItemTemplate{}
 	allItemTemplates = append(allItemTemplates, weapons...)
 	allItemTemplates = append(allItemTemplates, armor...)
+	itr.itemTemplates = allItemTemplates
+
+	log.Info("itemTemplateRepo got ", len(allItemTemplates), " templates")
 
 	return itr
 }
 
-func (itr *itemTemplatesRepository) loadItemTemplates(yamlFile string) []*entities.ItemTemplate {
+func (itr *itemTemplatesRepository) loadItemTemplates(yamlFile string) []entities.ItemTemplate {
 
-	itemTemplates := []*entities.ItemTemplate{}
+	itemTemplates := &[]entities.ItemTemplate{}
 
-	fileNameWithPath := itr.dungeonDataDir + yamlFile
+	fileNameWithPath := itr.dungeonDataDir + itemsSubfolder + yamlFile
 	if result, err := ioutil.ReadFile(fileNameWithPath); err != nil {
 		log.Error("Could not read item template file ", yamlFile)
 	} else {
+
+		log.Debug("CONTENT: ", result)
+
 		if err := yaml.Unmarshal(result, itemTemplates); err != nil {
 			log.Error("Error unmarshelling item templates", yamlFile)
+			log.Info("-------")
+		} else {
+			log.Debug("SUCCESS")
+			return *itemTemplates
 		}
 	}
 
-	return itemTemplates
+	return *itemTemplates
 }
 
-func (itr *itemTemplatesRepository) FindAll() ([]*entities.Item, error) {
-	return nil, nil
+func (itr *itemTemplatesRepository) FindAll() ([]entities.ItemTemplate, error) {
+	return itr.itemTemplates, nil
 }
 
-func (itr *itemTemplatesRepository) FindByTemplateID(templateID string) (*entities.Item, error) {
-	return nil, nil
+func (itr *itemTemplatesRepository) FindByTemplateID(templateID string) (*entities.ItemTemplate, error) {
+
+	for _, v := range itr.itemTemplates {
+		if v.TemplateID == templateID {
+			return &v, nil
+		}
+	}
+
+	return nil, errors.New("could not find item template with id: " + templateID)
 }

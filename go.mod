@@ -8,10 +8,13 @@ require (
 	github.com/atla/lotd v0.0.0-20190218215952-0cb020788ba4
 	github.com/gin-gonic/gin v1.4.0
 	github.com/globalsign/mgo v0.0.0-20181015135952-eeefdecb41b8
+	github.com/golang/gddo v0.0.0-20190904175337-72a348e765d2
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/gorilla/mux v1.6.2
+	github.com/inconshreveable/log15 v0.0.0-20180818164646-67afb5ed74ec // indirect
 	github.com/jinzhu/gorm v1.9.11
 	github.com/joho/godotenv v1.3.0
+	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c // indirect
 	github.com/xdg/stringprep v1.0.0 // indirect

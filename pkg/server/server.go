@@ -3,7 +3,9 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+
+	log "github.com/sirupsen/logrus"
+
 	"net/http"
 	"time"
 
@@ -106,6 +108,7 @@ func (app *app) setupRoutes() {
 		Route{"/api/items", "GET", "Get all items", itemHandler.GetItems},
 		Route{"/api/items/{id}", "GET", "Get a single item", itemHandler.GetItemByID},
 		Route{"/api/items", "POST", "Create a new item", itemHandler.PostItem},
+		Route{"/api/createItem/{templateID}", "PUT", "Create a new item from template id", itemHandler.CreateItemFromTemplateID},
 
 		//itemTemplates
 		Route{"/api/itemTemplates", "GET", "Get all itemTemplates", itemTemplateHandler.GetItemTemplates},

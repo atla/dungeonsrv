@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/atla/dungeonsrv/pkg/entities"
-
 	"github.com/atla/dungeonsrv/pkg/service"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -16,6 +15,7 @@ type ItemHandler interface {
 	GetItems(w http.ResponseWriter, r *http.Request)
 	GetItemByID(w http.ResponseWriter, r *http.Request)
 	PostItem(w http.ResponseWriter, r *http.Request)
+	CreateItemFromTemplateID(w http.ResponseWriter, r *http.Request)
 }
 
 type itemHandler struct {
@@ -50,6 +50,25 @@ func (ih *itemHandler) GetItemByID(w http.ResponseWriter, r *http.Request) {
 	if item, err := ih.itemsService.GetItemsRepository().FindByID(id); err != nil {
 		ih.httpResponder.ERROR(w, http.StatusNotFound)
 	} else {
+		ih.httpResponder.JSON(w, http.StatusOK, item)
+	}
+}
+
+// Create item from template id
+func (ih *itemHandler) CreateItemFromTemplateID(w http.ResponseWriter, r *http.Request) {
+
+	params := mux.Vars(r)
+	var id = params["templateID"]
+
+	item, err := ih.itemsService.CreateItemFromTemplateID(id)
+
+	if err != nil {
+		log.Error(err)
+		ih.httpResponder.ERROR(w, http.StatusNotFound)
+	} else {
+
+		// save any item we created using this method
+		ih.itemsService.GetItemsRepository().Store(item)
 		ih.httpResponder.JSON(w, http.StatusOK, item)
 	}
 }
