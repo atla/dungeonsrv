@@ -12,6 +12,8 @@ github.com/asaskevich/EventBus v0.0.0-20180315140547-d46933a94f05 h1:Shem5lRG4gJ
 github.com/asaskevich/EventBus v0.0.0-20180315140547-d46933a94f05/go.mod h1:JS7hed4L1fj0hXcyEejnW57/7LCetXggd+vwrRnYeII=
 github.com/atla/athena v0.0.0-20181211213349-103d68f8145e h1:ALi6ORUM2F4xYfNUrgZMdkw0PT2KzDTjTeZJcMZgQiU=
 github.com/atla/athena v0.0.0-20181211213349-103d68f8145e/go.mod h1:P2sQQlgMg2Y50b0Onh9BS89hWWQhf+d+D5OGilk7msg=
+github.com/atla/dungeonsrv/cmd/cli v0.0.0-20191104074700-6c792246a9c6 h1:Wdpf4R+aX+uUcFPL2TvPfMVnroL7IoYE6qHCCg0ZwE0=
+github.com/atla/dungeonsrv/cmd/cli v0.0.0-20191104074700-6c792246a9c6/go.mod h1:4SBmm50oE2udgLxoVKsO43OrgIH0weVfZxMoadWn69A=
 github.com/atla/lotd v0.0.0-20190218215952-0cb020788ba4 h1:MJ+Qr5RcUXQr4mOLeRFxSZ9Q5+2gFM/d+jkajVu5mQA=
 github.com/atla/lotd v0.0.0-20190218215952-0cb020788ba4/go.mod h1:+zbdhqLuqcHBNL2D4gWOEfJ+bQhOzbqlxeJ7MfUCM6Q=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=

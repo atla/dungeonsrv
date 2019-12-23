@@ -6,7 +6,7 @@ type AvatarJoinedRoom struct {
 	//	Room   *Room
 }
 
-// AvatarLeftRoom ... asdd
+// AvatarLeftRoom ... asdd	
 type AvatarLeftRoom struct {
 	//Avatar *Avatar
 	//Room   *Room

@@ -5,6 +5,7 @@ go 1.12
 require (
 	github.com/asaskevich/EventBus v0.0.0-20180315140547-d46933a94f05
 	github.com/atla/athena v0.0.0-20181211213349-103d68f8145e
+	github.com/atla/dungeonsrv/cmd/cli v0.0.0-20191104074700-6c792246a9c6 // indirect
 	github.com/atla/lotd v0.0.0-20190218215952-0cb020788ba4
 	github.com/gin-gonic/gin v1.4.0
 	github.com/globalsign/mgo v0.0.0-20181015135952-eeefdecb41b8
