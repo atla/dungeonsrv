@@ -32,6 +32,11 @@ func (r *RoomData) Collides(r2 RoomData) bool {
 	return false
 }
 
+// IsInside returns true if a point is within the bounds of the room
+func (r *RoomData) IsInside(x, y int) bool {
+	return x >= r.X && x <= r.X+r.Width && y >= r.Y && y <= r.Y+r.Height
+}
+
 // Extrude extrudes a room by factor returning a bigger or smaller room
 func (r *RoomData) Extrude(factor int) *RoomData {
 	return &RoomData{

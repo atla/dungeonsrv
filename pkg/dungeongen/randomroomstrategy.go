@@ -7,15 +7,16 @@ import (
 
 // RandomRoomStrategy...
 type RandomRoomStrategy struct {
-	Density           RoomDensity
-	MaxRooms          int
-	UseRandomSeed     bool
-	Seed              int
-	MaxRoomWidth      int
-	MaxRoomHeight     int
-	MinRoomWidth      int
-	MinRoomHeight     int
-	SpaceBetweenRooms int
+	Density                    RoomDensity
+	MaxRooms                   int
+	UseRandomSeed              bool
+	Seed                       int
+	MaxRoomWidth               int
+	MaxRoomHeight              int
+	MinRoomWidth               int
+	MinRoomHeight              int
+	SpaceBetweenRooms          int
+	ChanceOfRoomMultiplication int
 }
 
 type RoomDensity int8
@@ -30,14 +31,15 @@ const (
 // NewRandomRoomStrategy returns a default RandomRoomStrategy
 func NewRandomRoomStrategy() *RandomRoomStrategy {
 	return &RandomRoomStrategy{
-		Density:           RoomDensityMedium,
-		MaxRooms:          -1,
-		UseRandomSeed:     true,
-		MinRoomWidth:      10,
-		MinRoomHeight:     10,
-		MaxRoomWidth:      50,
-		MaxRoomHeight:     50,
-		SpaceBetweenRooms: 2,
+		Density:                    RoomDensityMedium,
+		MaxRooms:                   -1,
+		UseRandomSeed:              true,
+		MinRoomWidth:               5,
+		MinRoomHeight:              5,
+		MaxRoomWidth:               50,
+		MaxRoomHeight:              50,
+		SpaceBetweenRooms:          2,
+		ChanceOfRoomMultiplication: 10,
 	}
 }
 
@@ -49,7 +51,7 @@ const (
 )
 
 func getMaxRoomsForDensity(data *DungeonData, density RoomDensity) int {
-	baseFor100x100 := float32(int(density) * 50.0)
+	baseFor100x100 := float32(int(density) * 100.0)
 	factor := float32(((data.Width + data.Height) / 2) / 100.0)
 	return int(baseFor100x100 * factor)
 }
@@ -62,12 +64,14 @@ func (strategy *RandomRoomStrategy) Create(data *DungeonData) {
 		strategy.MaxRooms = getMaxRoomsForDensity(data, strategy.Density)
 	}
 
+	var lastRoom *RoomData
 	// 1st Step: Create rooms
 	for i := 0; i < strategy.MaxRooms; i++ {
-		newRoom := strategy.createRandomRoom(data)
+		newRoom := strategy.createRandomRoom(data, lastRoom)
 
 		if !strategy.roomCollidesWithExisting(data, newRoom) {
 			addRoomToDungeon(data, newRoom)
+			lastRoom = newRoom
 		}
 	}
 
@@ -117,10 +121,52 @@ func (strategy *RandomRoomStrategy) Create(data *DungeonData) {
 			data.Set(current.X, current.Y, DoorTileType)
 		case DoorTileType:
 			// TODO: find according room
+			if connectedRoom, error := data.FindRoomForCoord(current.X, current.Y); error == nil {
+				connectedRoom.IsConnected = true
+				// TODO create a passage between the two rooms
+			}
+
 			room.IsConnected = true
 			break
 		}
 	}
+
+	// 3rd Step: create walls around empty floor tiles
+	cleanupHallways(data)
+
+}
+
+func cleanupHallways(data *DungeonData) {
+	for x := 0; x < data.Width; x++ {
+		for y := 0; y < data.Height; y++ {
+			// if there is an empty tile check if there is a floor tile around
+			// if there is a floor tile transform this into a wall
+			if data.Get(x, y) == EmptyTileType {
+				if findConnectedTile(x, y, FloorTileType, data) > 0 {
+					data.Set(x, y, WallTileType)
+				}
+			}
+		}
+	}
+}
+
+func findConnectedTile(x, y int, tile TileType, data *DungeonData) int {
+	found := 0
+	for x2 := x - 1; x2 < x+2; x2++ {
+		for y2 := y - 1; y2 < y+2; y2++ {
+			// not center
+			if x2 == 0 && y2 == 0 {
+				continue
+			}
+			// inside dungeon bounds
+			if !data.IsOutside(x2, y2) {
+				if data.Get(x2, y2) == tile {
+					found++
+				}
+			}
+		}
+	}
+	return found
 }
 
 func (strategy *RandomRoomStrategy) selectRandomWall(room *RoomData) (Vec2D, Vec2D) {
@@ -187,7 +233,11 @@ func max(a int, b int) int {
 	return a
 }
 
-func (strategy *RandomRoomStrategy) createRandomRoom(data *DungeonData) *RoomData {
+func chanceInPercent(p int) bool {
+	return rand.Int()%100 < p
+}
+
+func (strategy *RandomRoomStrategy) createRandomRoom(data *DungeonData, lastRoom *RoomData) *RoomData {
 
 	seed := time.Now().UnixNano()
 	r := rand.New(rand.NewSource(seed))
@@ -196,6 +246,36 @@ func (strategy *RandomRoomStrategy) createRandomRoom(data *DungeonData) *RoomDat
 	h := max(strategy.MinRoomHeight, r.Int()%strategy.MaxRoomHeight)
 	x := max(0, (r.Int()%data.Width - w))
 	y := max(0, (r.Int()%data.Height - h))
+
+	// 10% chance to build the new room next to the old one
+	if lastRoom != nil && chanceInPercent(strategy.ChanceOfRoomMultiplication) {
+		switch r.Int() % 4 {
+		case 0:
+			if lastRoom.X-w > 0 {
+				x = lastRoom.X - w
+				y = lastRoom.Y
+			}
+			break
+		case 1:
+			if lastRoom.Y-h > 0 {
+				x = lastRoom.X
+				y = lastRoom.Y - h
+			}
+			break
+		case 2:
+			if (lastRoom.X+lastRoom.Width)+w < data.Width {
+				x = lastRoom.X + lastRoom.Width
+				y = lastRoom.Y
+			}
+			break
+		case 3:
+			if (lastRoom.Y+lastRoom.Height)+h < data.Height {
+				x = lastRoom.X
+				y = lastRoom.Y + lastRoom.Height
+			}
+			break
+		}
+	}
 
 	roomData := &RoomData{
 		X:      x,

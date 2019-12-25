@@ -1,5 +1,7 @@
 package dungeongen
 
+import "errors"
+
 //DungeonCreationStrategy ...
 type DungeonCreationStrategy interface {
 	Create(data *DungeonData)
@@ -37,6 +39,17 @@ func (data *DungeonData) Set(x int, y int, tile TileType) {
 	}
 
 	data.MapData[x+y*data.Width] = tile
+}
+
+//FindRoomForCoord ...
+func (data *DungeonData) FindRoomForCoord(x, y int) (*RoomData, error) {
+	for _, room := range data.Rooms {
+		if room.IsInside(x, y) {
+			// currently there should only be a single room at this coord
+			return room, nil
+		}
+	}
+	return nil, errors.New("Could not find Room at coord")
 }
 
 //Get ...
