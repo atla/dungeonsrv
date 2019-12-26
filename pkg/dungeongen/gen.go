@@ -12,16 +12,26 @@ type DungeonData struct {
 	Width  int
 	Height int
 
-	MapData MapData2D
-	Rooms   []*RoomData
+	MapData  MapData2D
+	PathData MapData2D
+	Rooms    []*RoomData
 }
 
 //TileType ...
 type TileType int16
 
+const (
+	EmptyTileType TileType = iota + 1
+	FloorTileType
+	WallTileType
+	DoorTileType
+	PathTileType
+)
+
 //MapData2D ...
 type MapData2D []TileType
 
+// IsOutside checks if coords are outside of the dungeon space
 func (data *DungeonData) IsOutside(x, y int) bool {
 	return x < 0 || y < 0 || x > data.Width-1 || y > data.Height-1
 }
@@ -30,15 +40,34 @@ func (data *DungeonData) IsOutside(x, y int) bool {
 func (data *DungeonData) Set(x int, y int, tile TileType) {
 
 	// ignore Set va.ues out of bounds
-	if x < 0 || x > data.Width {
+	if x < 0 || x > data.Width || y < 0 || y > data.Height {
 		return
 	}
-	// ignore Set va.ues out of bounds
-	if y < 0 || y > data.Height {
-		return
-	}
-
 	data.MapData[x+y*data.Width] = tile
+}
+
+//SetPath ...
+func (data *DungeonData) SetPath(x int, y int, tile TileType) {
+
+	// ignore Set va.ues out of bounds
+	if x < 0 || x > data.Width || y < 0 || y > data.Height {
+		return
+	}
+	data.PathData[x+y*data.Width] = tile
+}
+
+//SetRoomPath ...
+func (data *DungeonData) SetRoomPath(x, y, width, height int, tile TileType) {
+
+	// ignore Set va.ues out of bounds
+	if x < 0 || (x+width) > data.Width || y < 0 || (y+height) > data.Height {
+		return
+	}
+	for xp := x; xp < x+width; xp++ {
+		for yp := y; yp < y+height; yp++ {
+			data.PathData[xp+yp*data.Width] = tile
+		}
+	}
 }
 
 //FindRoomForCoord ...
@@ -67,13 +96,6 @@ func (data *DungeonData) Get(x int, y int) TileType {
 	return data.MapData[x+y*data.Width]
 }
 
-const (
-	EmptyTileType TileType = iota + 1
-	FloorTileType
-	WallTileType
-	DoorTileType
-)
-
 //Init ...
 func (data *DungeonData) Init() {
 	data.MapData = make([]TileType, data.Width*data.Height)
@@ -81,6 +103,7 @@ func (data *DungeonData) Init() {
 	for x := 0; x < data.Width; x++ {
 		for y := 0; y < data.Height; y++ {
 			data.Set(x, y, EmptyTileType)
+			data.SetPath(x, y, EmptyTileType)
 		}
 	}
 }

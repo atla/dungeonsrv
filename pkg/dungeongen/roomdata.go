@@ -8,6 +8,9 @@ type RoomData struct {
 	Height int
 
 	IsConnected bool
+	Visited     bool
+
+	hasDoor map[int]Vec2D
 }
 
 //NewRoomData creates a new room data instance
@@ -18,7 +21,31 @@ func NewRoomData(x int, y int, width int, height int) *RoomData {
 		Width:       width,
 		Height:      height,
 		IsConnected: false,
+		Visited:     false,
+		hasDoor:     make(map[int]Vec2D),
 	}
+}
+
+// HasDoor ...
+func (r *RoomData) HasDoor(direction int) bool {
+	_, hasDoor := r.hasDoor[direction]
+	return hasDoor
+}
+
+// GetDoor ...
+func (r *RoomData) GetDoor(direction int) Vec2D {
+	door, _ := r.hasDoor[direction]
+	return door
+}
+
+// AddDoor ...
+func (r *RoomData) AddDoor(direction int, pos Vec2D) {
+	r.hasDoor[direction] = pos
+}
+
+// Doors ...
+func (r *RoomData) Doors() map[int]Vec2D {
+	return r.hasDoor
 }
 
 // Collides returns true if two rooms overlap
@@ -40,9 +67,11 @@ func (r *RoomData) IsInside(x, y int) bool {
 // Extrude extrudes a room by factor returning a bigger or smaller room
 func (r *RoomData) Extrude(factor int) *RoomData {
 	return &RoomData{
-		X:      r.X - factor,
-		Y:      r.Y - factor,
-		Width:  r.Width + (factor * 2),
-		Height: r.Height + (factor * 2),
+		X:           r.X - factor,
+		Y:           r.Y - factor,
+		Width:       r.Width + (factor * 2),
+		Height:      r.Height + (factor * 2),
+		IsConnected: r.IsConnected,
+		hasDoor:     r.Doors(),
 	}
 }

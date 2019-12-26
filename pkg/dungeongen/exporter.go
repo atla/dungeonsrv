@@ -1,14 +1,15 @@
 package dungeongen
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"image/png"
 
-	"github.com/nfnt/resize"
-
 	"log"
 	"os"
+
+	"github.com/nfnt/resize"
 )
 
 //ExporterFormat is the format used for exporter the DungeonData
@@ -27,68 +28,66 @@ type Exporter interface {
 type PNGExporter struct {
 }
 
-var floorTileColor color.NRGBA = color.NRGBA{
-	R: 255,
-	G: 128,
-	B: 128,
-	A: 255,
-}
-var doorTileColor color.NRGBA = color.NRGBA{
-	R: 80,
-	G: 200,
-	B: 80,
-	A: 255,
-}
+//TODO: Extract to utils package?
+//ParseHexColor ...
+func ParseHexColor(s string) (c color.RGBA, err error) {
+	c.A = 0xff
+	switch len(s) {
+	case 7:
+		_, err = fmt.Sscanf(s, "#%02x%02x%02x", &c.R, &c.G, &c.B)
+	case 4:
+		_, err = fmt.Sscanf(s, "#%1x%1x%1x", &c.R, &c.G, &c.B)
+		// Double the hex digits:
+		c.R *= 17
+		c.G *= 17
+		c.B *= 17
+	default:
+		err = fmt.Errorf("invalid length, must be 7 or 4")
 
-var wallTileColor color.NRGBA = color.NRGBA{
-	R: 255,
-	G: 200,
-	B: 200,
-	A: 255,
-}
-
-var emptyTileColor color.NRGBA = color.NRGBA{
-	R: 0,
-	G: 0,
-	B: 0,
-	A: 255,
+	}
+	return
 }
 
 // Export PNG
-func (exp *PNGExporter) Export(data DungeonData, format ExporterFormat) interface{} {
+func (exp *PNGExporter) ExportAsImage(data DungeonData, format ExporterFormat) *image.Image {
+
+	theme := make(map[TileType]color.RGBA)
+	theme[FloorTileType], _ = ParseHexColor("#3B4252")
+	theme[DoorTileType], _ = ParseHexColor("#81A1C1")
+	theme[WallTileType], _ = ParseHexColor("#4C566A")
+	theme[EmptyTileType], _ = ParseHexColor("#2E3440")
 
 	width := data.Width
 	height := data.Height
 
-	img := image.NewNRGBA(image.Rectangle{Max: image.Point{X: width, Y: height}})
+	img := image.NewRGBA(image.Rectangle{Max: image.Point{X: width, Y: height}})
 
 	for x := 0; x < width; x++ {
 		for y := 0; y < height; y++ {
-			switch data.Get(x, y) {
-			case FloorTileType:
-				img.SetNRGBA(x, y, floorTileColor)
-				break
-			case WallTileType:
-				img.SetNRGBA(x, y, wallTileColor)
-				break
-			case DoorTileType:
-				img.SetNRGBA(x, y, doorTileColor)
-				break
-			default:
-				//img.SetNRGBA(x, y, emptyTileColor)
-				break
+
+			tile := data.Get(x, y)
+
+			if color, ok := theme[tile]; ok {
+				img.SetRGBA(x, y, color)
 			}
 		}
 	}
 
-	img2 := resize.Resize(uint(data.Width*2), 0, img.SubImage(img.Rect), resize.NearestNeighbor)
+	img2 := resize.Resize(uint(data.Width*5), 0, img.SubImage(img.Rect), resize.NearestNeighbor)
+	return &img2
+}
+
+// Export PNG
+func (exp *PNGExporter) ExportAsFile(data DungeonData, format ExporterFormat, fileName string) interface{} {
+
+	img2 := exp.ExportAsImage(data, format)
 
 	f, err := os.Create("image.png")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if err := png.Encode(f, img2); err != nil {
+	if err := png.Encode(f, *img2); err != nil {
 		f.Close()
 		log.Fatal(err)
 	}
@@ -96,5 +95,5 @@ func (exp *PNGExporter) Export(data DungeonData, format ExporterFormat) interfac
 	if err := f.Close(); err != nil {
 		log.Fatal(err)
 	}
-	return img
+	return img2
 }
