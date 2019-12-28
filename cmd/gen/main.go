@@ -57,9 +57,10 @@ func main() {
 		rs.SpaceBetweenRooms = 1 + rand.Int()%3
 		rs.ChanceOfAdjacentRooms = 10 + rand.Int()%50
 		rs.ChanceForDivergence = 5 + rand.Int()%20
+		rs.RoomConnectedness = 3 // + rand.Int()%3
 
-		width := 200  //(2 + rand.Int()%8) * 50
-		height := 100 //2 + rand.Int()%8) * 50
+		width := (2 + rand.Int()%8) * 50
+		height := (2 + rand.Int()%8) * 50
 
 		gen := dungeongen.DefaultBuilder().WithCreationStrategy(rs).WithSize(width, height)
 

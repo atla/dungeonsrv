@@ -18,3 +18,10 @@ func (v Vec2D) Add(v2 Vec2D) Vec2D {
 		Y: v.Y + v2.Y,
 	}
 }
+
+func (v Vec2D) Invert() Vec2D {
+	return Vec2D{
+		X: -v.X,
+		Y: -v.Y,
+	}
+}

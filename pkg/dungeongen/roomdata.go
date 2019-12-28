@@ -48,6 +48,15 @@ func (r *RoomData) Doors() map[int]Vec2D {
 	return r.hasDoor
 }
 
+//IsCorner returns if coord is a room corner (dont add doors there)
+func (r *RoomData) IsCorner(x, y int) bool {
+
+	if (r.Y == y && r.X == x) || (r.Y == y && r.X+r.Width == x) || (r.Y+r.Height == y && r.X == x) || (r.Y+r.Height == y && r.X+r.Width == x) {
+		return true
+	}
+	return false
+}
+
 // Collides returns true if two rooms overlap
 func (r *RoomData) Collides(r2 RoomData) bool {
 	if r.X < r2.X+r2.Width &&

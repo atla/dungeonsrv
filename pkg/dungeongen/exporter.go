@@ -56,6 +56,7 @@ func (exp *PNGExporter) ExportAsImage(data DungeonData, format ExporterFormat) *
 	theme[DoorTileType], _ = ParseHexColor("#81A1C1")
 	theme[WallTileType], _ = ParseHexColor("#4C566A")
 	theme[EmptyTileType], _ = ParseHexColor("#2E3440")
+	theme[PathTileType], _ = ParseHexColor("#33aa33")
 
 	width := data.Width
 	height := data.Height
@@ -69,6 +70,13 @@ func (exp *PNGExporter) ExportAsImage(data DungeonData, format ExporterFormat) *
 
 			if color, ok := theme[tile]; ok {
 				img.SetRGBA(x, y, color)
+			}
+
+			tile = data.GetPath(x, y)
+			if tile != EmptyTileType {
+				if color, ok := theme[tile]; ok {
+					img.SetRGBA(x, y, color)
+				}
 			}
 		}
 	}

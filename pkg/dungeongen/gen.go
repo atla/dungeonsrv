@@ -40,7 +40,7 @@ func (data *DungeonData) IsOutside(x, y int) bool {
 func (data *DungeonData) Set(x int, y int, tile TileType) {
 
 	// ignore Set va.ues out of bounds
-	if x < 0 || x > data.Width || y < 0 || y > data.Height {
+	if x < 0 || x >= data.Width || y < 0 || y >= data.Height {
 		return
 	}
 	data.MapData[x+y*data.Width] = tile
@@ -49,8 +49,8 @@ func (data *DungeonData) Set(x int, y int, tile TileType) {
 //SetPath ...
 func (data *DungeonData) SetPath(x int, y int, tile TileType) {
 
-	// ignore Set va.ues out of bounds
-	if x < 0 || x > data.Width || y < 0 || y > data.Height {
+	// ignore Set values out of bounds
+	if x < 0 || x >= data.Width || y < 0 || y >= data.Height {
 		return
 	}
 	data.PathData[x+y*data.Width] = tile
@@ -84,21 +84,27 @@ func (data *DungeonData) FindRoomForCoord(x, y int) (*RoomData, error) {
 //Get ...
 func (data *DungeonData) Get(x int, y int) TileType {
 
-	// ignore Set va.ues out of bounds
-	if x < 0 || x > data.Width {
+	// ignore Set values out of bounds
+	if x < 0 || x >= data.Width || y < 0 || y >= data.Height {
 		return -1
 	}
-	// ignore Set va.ues out of bounds
-	if y < 0 || y > data.Height {
-		return -1
-	}
-
 	return data.MapData[x+y*data.Width]
+}
+
+//GetPath ...
+func (data *DungeonData) GetPath(x int, y int) TileType {
+
+	// ignore Set values out of bounds
+	if x < 0 || x >= data.Width || y < 0 || y >= data.Height {
+		return -1
+	}
+	return data.PathData[x+y*data.Width]
 }
 
 //Init ...
 func (data *DungeonData) Init() {
 	data.MapData = make([]TileType, data.Width*data.Height)
+	data.PathData = make([]TileType, data.Width*data.Height)
 
 	for x := 0; x < data.Width; x++ {
 		for y := 0; y < data.Height; y++ {
@@ -162,6 +168,9 @@ func (builder *defaultBuilder) Build() *DungeonData {
 
 	// Invoke strategy
 	builder.Strategy.Create(builder.Data)
+
+	explorer := NewExplorer()
+	explorer.Explore(builder.Data)
 
 	return builder.Data
 }

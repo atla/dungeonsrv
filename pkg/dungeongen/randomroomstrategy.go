@@ -1,6 +1,8 @@
 package dungeongen
 
 import (
+	"errors"
+	"math"
 	"math/rand"
 	"time"
 )
@@ -18,6 +20,7 @@ type RandomRoomStrategy struct {
 	SpaceBetweenRooms     int
 	ChanceOfAdjacentRooms int
 	ChanceForDivergence   int
+	RoomConnectedness     int
 }
 
 type RoomDensity int8
@@ -42,6 +45,7 @@ func NewRandomRoomStrategy() *RandomRoomStrategy {
 		SpaceBetweenRooms:     2,
 		ChanceOfAdjacentRooms: 30,
 		ChanceForDivergence:   10,
+		RoomConnectedness:     2,
 	}
 }
 
@@ -77,11 +81,17 @@ func (strategy *RandomRoomStrategy) buildAdjacentRoom(data *DungeonData, newRoom
 		data.Set(door.X, door.Y, DoorTileType)
 
 		newRoom.AddDoor(direction, door)
-		newRoom.IsConnected = true
+		// opposite direction
+		adjacentRoom.AddDoor((direction+2)%4, door)
+		//newRoom.IsConnected = true
 		//adjacentRoom.IsConnected = true
 
 		newRoom = adjacentRoom
 	}
+}
+
+func abs(n int) int {
+	return int(math.Abs(float64(n)))
 }
 
 // Create ...
@@ -113,69 +123,125 @@ func (strategy *RandomRoomStrategy) Create(data *DungeonData) {
 			continue
 		}
 
-		// Select a random wall
-		start, direction, wall := strategy.selectRandomWall(room)
-		collision := false
-		current := start
+		for i := 0; i < strategy.RoomConnectedness; i++ {
+			// Select a random wall
+			start, direction, wall, err := strategy.selectRandomWall(room)
 
-		// create a new door at the starting point
-		data.Set(current.X, current.Y, DoorTileType)
-		room.AddDoor(wall, current)
+			if err == nil {
+				collision := false
+				current := start
 
-		//TODO: add exit/action to room (not roomdata)
+				// create a new door at the starting point
+				data.Set(current.X, current.Y, DoorTileType)
+				room.AddDoor(wall, current)
 
-		// walk direction until collision
+				//TODO: add exit/action to room (not roomdata)
 
-		chanceForDivergence := strategy.ChanceForDivergence
+				// walk direction until collision
 
-		for !collision {
-			next := current.Add(direction)
+				chanceForDivergence := strategy.ChanceForDivergence
 
-			if chanceInPercent(chanceForDivergence) {
-				direction = changeDirection(direction)
-				chanceForDivergence /= 2
+				for !collision {
+					next := current.Add(direction)
+
+					if chanceInPercent(chanceForDivergence) {
+						direction = changeDirection(direction)
+						chanceForDivergence /= 2
+					}
+
+					//collided with dungeon bounds
+					if data.IsOutside(next.X, next.Y) {
+						collision = true
+						data.Set(current.X, current.Y, WallTileType)
+						break
+					}
+
+					tileType := data.Get(next.X, next.Y)
+
+					if tileType != EmptyTileType {
+						collision = true
+					} else {
+						data.Set(next.X, next.Y, FloorTileType)
+					}
+					current = next
+				}
+
+				switch data.Get(current.X, current.Y) {
+				case FloorTileType:
+					room.IsConnected = true
+					break
+				case WallTileType:
+
+					if connectedRoom, error := data.FindRoomForCoord(current.X, current.Y); error == nil {
+						if !connectedRoom.IsCorner(current.X, current.Y) {
+
+							foundDoor := false
+							// check if there is already a door 1 unit away
+							if abs(direction.X) == 1 {
+								if data.Get(current.X, current.Y-1) == DoorTileType {
+									// one step back
+									current = current.Add(direction.Invert())
+									data.Set(current.X, current.Y-1, FloorTileType)
+									foundDoor = true
+								} else if data.Get(current.X, current.Y+1) == DoorTileType {
+									// one step back
+									current = current.Add(direction.Invert())
+									data.Set(current.X, current.Y+1, FloorTileType)
+									foundDoor = true
+
+								}
+							} else if abs(direction.Y) == 1 {
+								if data.Get(current.X-1, current.Y) == DoorTileType {
+									// one step back
+									current = current.Add(direction.Invert())
+									data.Set(current.X-1, current.Y, FloorTileType)
+									foundDoor = true
+
+								} else if data.Get(current.X+1, current.Y) == DoorTileType {
+									// one step back
+									current = current.Add(direction.Invert())
+									data.Set(current.X+1, current.Y, FloorTileType)
+									foundDoor = true
+								}
+							}
+
+							// no door yet, add a new one at the current position
+							if !foundDoor {
+								data.Set(current.X, current.Y, DoorTileType)
+								connectedRoom.IsConnected = true
+								connectedRoom.AddDoor(wall, current)
+							}
+
+							room.IsConnected = true
+
+							// TODO create a passage between the two rooms
+						}
+					}
+					break
+				case DoorTileType:
+
+					// TODO: find according room
+					if connectedRoom, error := data.FindRoomForCoord(current.X, current.Y); error == nil {
+
+						if !connectedRoom.IsCorner(current.X, current.Y) {
+							data.Set(current.X, current.Y, DoorTileType)
+							connectedRoom.IsConnected = true
+							connectedRoom.AddDoor(wall, current)
+							room.IsConnected = true
+							// TODO create a passage between the two rooms
+
+						}
+					}
+					break
+				}
 			}
-
-			//collided with dungeon bounds
-			if data.IsOutside(next.X, next.Y) {
-				collision = true
-				break
-			}
-
-			tileType := data.Get(next.X, next.Y)
-
-			if tileType != EmptyTileType {
-				collision = true
-			} else {
-				data.Set(next.X, next.Y, FloorTileType)
-			}
-			current = next
-		}
-
-		switch data.Get(current.X, current.Y) {
-		case FloorTileType:
-			room.IsConnected = true
-			break
-		case WallTileType:
-			data.Set(current.X, current.Y, DoorTileType)
-
-		case DoorTileType:
-			// TODO: find according room
-			if connectedRoom, error := data.FindRoomForCoord(current.X, current.Y); error == nil {
-				connectedRoom.IsConnected = true
-				// TODO create a passage between the two rooms
-			}
-
-			room.IsConnected = true
-			break
 		}
 	}
-
 	// 3rd Step: create walls around empty floor tiles
 	cleanupHallways(data)
-
 }
 
+// change direction by 90° randomly
 func changeDirection(direction Vec2D) Vec2D {
 	if direction.X == 0 {
 		if rand.Int()%2 == 0 {
@@ -225,9 +291,20 @@ func findConnectedTile(x, y int, tile TileType, data *DungeonData) int {
 	return found
 }
 
-func (strategy *RandomRoomStrategy) selectRandomWall(room *RoomData) (Vec2D, Vec2D, int) {
+func (strategy *RandomRoomStrategy) selectRandomWall(room *RoomData) (Vec2D, Vec2D, int, error) {
+
+	if len(room.Doors()) > 3 {
+		return NewVec2D(0, 0), NewVec2D(0, 0), -1, errors.New("could not find wall without door")
+	}
 
 	wall := rand.Int() % 4
+
+	// only select wall that has no door
+	for i := 0; room.HasDoor(wall) && i < 4; i++ {
+		// select another door
+		wall = (wall + 1) % 4
+	}
+
 	var start Vec2D
 	var direction Vec2D
 
@@ -241,20 +318,20 @@ func (strategy *RandomRoomStrategy) selectRandomWall(room *RoomData) (Vec2D, Vec
 		direction = NewVec2D(0, -1)
 		break
 	case DirectionEast:
-		start = NewVec2D(room.X+room.Width, room.Y+(rand.Int()%(room.Height-2)))
+		start = NewVec2D(room.X+room.Width, room.Y+1+(rand.Int()%(room.Height-2)))
 		direction = NewVec2D(1, 0)
 		break
 	case DirectionSouth:
-		start = NewVec2D(room.X+(rand.Int()%(room.Width-2)), room.Y+room.Height)
+		start = NewVec2D(room.X+1+(rand.Int()%(room.Width-2)), room.Y+room.Height)
 		direction = NewVec2D(0, 1)
 		break
 	}
-	return start, direction, wall
+	return start, direction, wall, nil
 }
 
 func (strategy *RandomRoomStrategy) roomCollidesWithExisting(data *DungeonData, room *RoomData) bool {
 
-	extruded := room.Extrude(1)
+	extruded := room.Extrude(strategy.SpaceBetweenRooms)
 
 	for _, r := range data.Rooms {
 		// extrude rooms by 1 so we get some spacing between rooms
@@ -340,9 +417,7 @@ func (strategy *RandomRoomStrategy) createDuplicateRoom(data *DungeonData, lastR
 
 	}
 
-	roomData := NewRoomData(x, y, w, h)
-
-	return roomData, direction
+	return NewRoomData(x, y, w, h), direction
 }
 
 func (strategy *RandomRoomStrategy) createRandomRoom(data *DungeonData) *RoomData {
