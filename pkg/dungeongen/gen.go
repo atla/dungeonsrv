@@ -2,9 +2,35 @@ package dungeongen
 
 import "errors"
 
+//AreaMask ...
+type AreaMask interface {
+	IsInside(x, y int) bool
+}
+
+//EmptyMask ...
+type EmptyMask struct {
+}
+
+//IsInside tet for EmptyMask
+func (em EmptyMask) IsInside(x, y int) bool {
+	return true
+}
+
+//CircleMask ...
+type CircleMask struct {
+	Radius  int
+	CenterX int
+	CenterY int
+}
+
+//IsInside tet for CircleMask
+func (cm CircleMask) IsInside(x, y int) bool {
+	return (x-cm.CenterX)*(x-cm.CenterX)+(y-cm.CenterY)*(y-cm.CenterY) < cm.Radius*cm.Radius
+}
+
 //DungeonCreationStrategy ...
 type DungeonCreationStrategy interface {
-	Create(data *DungeonData)
+	Create(data *DungeonData, mask AreaMask)
 }
 
 //DungeonData ...
@@ -167,7 +193,11 @@ func (builder *defaultBuilder) Build() *DungeonData {
 	builder.Data.Init()
 
 	// Invoke strategy
-	builder.Strategy.Create(builder.Data)
+	builder.Strategy.Create(builder.Data, CircleMask{
+		Radius:  (builder.Data.Width / 2) - builder.Data.Width/10,
+		CenterX: builder.Data.Width / 2,
+		CenterY: builder.Data.Height / 2,
+	})
 
 	explorer := NewExplorer()
 	explorer.Explore(builder.Data)

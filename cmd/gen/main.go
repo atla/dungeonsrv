@@ -8,8 +8,10 @@ import (
 	"math/rand"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/atla/dungeonsrv/pkg/dungeongen"
+	"github.com/atla/dungeonsrv/pkg/util"
 )
 
 func writeImage(w http.ResponseWriter, img *image.Image) {
@@ -40,7 +42,8 @@ func randomDensity() dungeongen.RoomDensity {
 
 func main() {
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/gen", func(w http.ResponseWriter, r *http.Request) {
+		defer util.TimeTrack(time.Now(), "HTTP /")
 
 		rs := dungeongen.NewRandomRoomStrategy()
 		rs.MinRoomWidth = 5 + rand.Int()%10
@@ -57,10 +60,10 @@ func main() {
 		rs.SpaceBetweenRooms = 1 + rand.Int()%3
 		rs.ChanceOfAdjacentRooms = 10 + rand.Int()%50
 		rs.ChanceForDivergence = 5 + rand.Int()%20
-		rs.RoomConnectedness = 3 // + rand.Int()%3
+		rs.RoomConnectedness = 1 + rand.Int()%3
 
-		width := (2 + rand.Int()%8) * 50
-		height := (2 + rand.Int()%8) * 50
+		width := (2 + rand.Int()%12) * 50
+		height := (2 + rand.Int()%12) * 50
 
 		gen := dungeongen.DefaultBuilder().WithCreationStrategy(rs).WithSize(width, height)
 

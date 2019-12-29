@@ -1,6 +1,11 @@
 package dungeongen
 
-import "errors"
+import (
+	"errors"
+	"time"
+
+	"github.com/atla/dungeonsrv/pkg/util"
+)
 
 // Explorer is used to explore a generated dungeon and create walkable path to be able to generate an interactive story
 type Explorer struct {
@@ -80,6 +85,8 @@ func visitRoom(data *DungeonData, room *RoomData) {
 
 // Explore starts the dungeon exploring
 func (e *Explorer) Explore(data *DungeonData) {
+
+	defer util.TimeTrack(time.Now(), "Explorer")
 
 	room, err := selectRandomUnvisitedRoom(data.Rooms)
 

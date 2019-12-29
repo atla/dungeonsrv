@@ -5,6 +5,8 @@ import (
 	"math"
 	"math/rand"
 	"time"
+
+	"github.com/atla/dungeonsrv/pkg/util"
 )
 
 // RandomRoomStrategy...
@@ -95,7 +97,8 @@ func abs(n int) int {
 }
 
 // Create ...
-func (strategy *RandomRoomStrategy) Create(data *DungeonData) {
+func (strategy *RandomRoomStrategy) Create(data *DungeonData, mask AreaMask) {
+	defer util.TimeTrack(time.Now(), "randomroomstrategy::Create")
 
 	// update max rooms
 	if strategy.MaxRooms < 0 {
@@ -104,7 +107,7 @@ func (strategy *RandomRoomStrategy) Create(data *DungeonData) {
 
 	// 1st Step: Create rooms
 	for i := 0; i < strategy.MaxRooms; i++ {
-		newRoom := strategy.createRandomRoom(data)
+		newRoom := strategy.createRandomRoom(data, mask)
 
 		if !strategy.roomCollidesWithExisting(data, newRoom) {
 			addRoomToDungeon(data, newRoom)
@@ -150,7 +153,7 @@ func (strategy *RandomRoomStrategy) Create(data *DungeonData) {
 					}
 
 					//collided with dungeon bounds
-					if data.IsOutside(next.X, next.Y) {
+					if !mask.IsInside(next.X, next.Y) {
 						collision = true
 						data.Set(current.X, current.Y, WallTileType)
 						break
@@ -238,7 +241,7 @@ func (strategy *RandomRoomStrategy) Create(data *DungeonData) {
 		}
 	}
 	// 3rd Step: create walls around empty floor tiles
-	cleanupHallways(data)
+	cleanupHallways(data, mask)
 }
 
 // change direction by 90° randomly
@@ -258,13 +261,13 @@ func changeDirection(direction Vec2D) Vec2D {
 	}
 }
 
-func cleanupHallways(data *DungeonData) {
+func cleanupHallways(data *DungeonData, mask AreaMask) {
 	for x := 0; x < data.Width; x++ {
 		for y := 0; y < data.Height; y++ {
 			// if there is an empty tile check if there is a floor tile around
 			// if there is a floor tile transform this into a wall
 			if data.Get(x, y) == EmptyTileType {
-				if findConnectedTile(x, y, FloorTileType, data) > 0 {
+				if findConnectedTile(x, y, FloorTileType, data, mask) > 0 {
 					data.Set(x, y, WallTileType)
 				}
 			}
@@ -272,7 +275,7 @@ func cleanupHallways(data *DungeonData) {
 	}
 }
 
-func findConnectedTile(x, y int, tile TileType, data *DungeonData) int {
+func findConnectedTile(x, y int, tile TileType, data *DungeonData, mask AreaMask) int {
 	found := 0
 	for x2 := x - 1; x2 < x+2; x2++ {
 		for y2 := y - 1; y2 < y+2; y2++ {
@@ -281,7 +284,7 @@ func findConnectedTile(x, y int, tile TileType, data *DungeonData) int {
 				continue
 			}
 			// inside dungeon bounds
-			if !data.IsOutside(x2, y2) {
+			if mask.IsInside(x2, y2) {
 				if data.Get(x2, y2) == tile {
 					found++
 				}
@@ -420,15 +423,23 @@ func (strategy *RandomRoomStrategy) createDuplicateRoom(data *DungeonData, lastR
 	return NewRoomData(x, y, w, h), direction
 }
 
-func (strategy *RandomRoomStrategy) createRandomRoom(data *DungeonData) *RoomData {
+func (strategy *RandomRoomStrategy) createRandomRoom(data *DungeonData, mask AreaMask) *RoomData {
 
 	seed := time.Now().UnixNano()
 	r := rand.New(rand.NewSource(seed))
 
-	w := max(strategy.MinRoomWidth, r.Int()%strategy.MaxRoomWidth)
-	h := max(strategy.MinRoomHeight, r.Int()%strategy.MaxRoomHeight)
-	x := max(0, (r.Int()%data.Width - w))
-	y := max(0, (r.Int()%data.Height - h))
+	var w, h, x, y int
+	isInside := false
+
+	// max trys?
+	for !isInside {
+		w = max(strategy.MinRoomWidth, r.Int()%strategy.MaxRoomWidth)
+		h = max(strategy.MinRoomHeight, r.Int()%strategy.MaxRoomHeight)
+		x = max(0, (r.Int()%data.Width - w))
+		y = max(0, (r.Int()%data.Height - h))
+
+		isInside = mask.IsInside(x, y) && mask.IsInside(x+w, y) && mask.IsInside(x, y+h) && mask.IsInside(x+w, y+h)
+	}
 
 	return NewRoomData(x, y, w, h)
 }
