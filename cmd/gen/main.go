@@ -62,11 +62,20 @@ func main() {
 		rs.ChanceForDivergence = 5 + rand.Int()%20
 		rs.RoomConnectedness = 1 + rand.Int()%3
 
-		width := (2 + rand.Int()%12) * 50
-		height := (2 + rand.Int()%12) * 50
+		//bitmapMask := dungeongen.LoadFromFile("mask2.png")
+
+		width := 100  //(2 + rand.Int()%12) * 50
+		height := 100 //(2 + rand.Int()%12) * 50
+
+		height = width
 
 		gen := dungeongen.DefaultBuilder().WithCreationStrategy(rs).WithSize(width, height)
-
+		/*.WithMask(&dungeongen.CircleMask{
+			Radius:  width / 2,
+			CenterX: width / 2,
+			CenterY: height / 2,
+		})
+		*/
 		dungeon := gen.Build()
 
 		exporter := dungeongen.PNGExporter{}

@@ -5,6 +5,8 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"math/rand"
+	"time"
 
 	"log"
 	"os"
@@ -48,6 +50,17 @@ func ParseHexColor(s string) (c color.RGBA, err error) {
 	return
 }
 
+func GetRandomColorInRgb() (c color.RGBA) {
+
+	rand.Seed(time.Now().UnixNano())
+	c.R = uint8(rand.Intn(255))
+	c.G = uint8(rand.Intn(255))
+	c.B = uint8(rand.Intn(255))
+	c.A = 255
+
+	return c
+}
+
 // Export PNG
 func (exp *PNGExporter) ExportAsImage(data DungeonData, format ExporterFormat) *image.Image {
 
@@ -56,7 +69,9 @@ func (exp *PNGExporter) ExportAsImage(data DungeonData, format ExporterFormat) *
 	theme[DoorTileType], _ = ParseHexColor("#81A1C1")
 	theme[WallTileType], _ = ParseHexColor("#4C566A")
 	theme[EmptyTileType], _ = ParseHexColor("#2E3440")
-	theme[PathTileType], _ = ParseHexColor("#33aa33")
+	//theme[PathTileType], _ = ParseHexColor("#33aa33")
+
+	sectionColors := make(map[uint8]color.RGBA)
 
 	width := data.Width
 	height := data.Height
@@ -72,10 +87,14 @@ func (exp *PNGExporter) ExportAsImage(data DungeonData, format ExporterFormat) *
 				img.SetRGBA(x, y, color)
 			}
 
-			tile = data.GetPath(x, y)
-			if tile != EmptyTileType {
-				if color, ok := theme[tile]; ok {
+			pathTile := data.GetPath(x, y)
+			if pathTile > 0 {
+				if color, ok := sectionColors[pathTile]; ok {
 					img.SetRGBA(x, y, color)
+				} else {
+					c := GetRandomColorInRgb()
+					sectionColors[pathTile] = c
+					img.SetRGBA(x, y, c)
 				}
 			}
 		}

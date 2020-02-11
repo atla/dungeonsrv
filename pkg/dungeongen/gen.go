@@ -2,35 +2,19 @@ package dungeongen
 
 import "errors"
 
-//AreaMask ...
-type AreaMask interface {
-	IsInside(x, y int) bool
-}
-
-//EmptyMask ...
-type EmptyMask struct {
-}
-
-//IsInside tet for EmptyMask
-func (em EmptyMask) IsInside(x, y int) bool {
-	return true
-}
-
-//CircleMask ...
-type CircleMask struct {
-	Radius  int
-	CenterX int
-	CenterY int
-}
-
-//IsInside tet for CircleMask
-func (cm CircleMask) IsInside(x, y int) bool {
-	return (x-cm.CenterX)*(x-cm.CenterX)+(y-cm.CenterY)*(y-cm.CenterY) < cm.Radius*cm.Radius
-}
-
 //DungeonCreationStrategy ...
 type DungeonCreationStrategy interface {
 	Create(data *DungeonData, mask AreaMask)
+}
+
+//Builder ..
+type Builder interface {
+	Build() *DungeonData
+
+	WithSmallSize() Builder
+	WithMask(mask AreaMask) Builder
+	WithSize(width int, height int) Builder
+	WithCreationStrategy(strategy DungeonCreationStrategy) Builder
 }
 
 //DungeonData ...
@@ -39,7 +23,7 @@ type DungeonData struct {
 	Height int
 
 	MapData  MapData2D
-	PathData MapData2D
+	PathData PathData2D
 	Rooms    []*RoomData
 }
 
@@ -51,15 +35,27 @@ const (
 	FloorTileType
 	WallTileType
 	DoorTileType
-	PathTileType
+	//PathTileType
 )
 
 //MapData2D ...
 type MapData2D []TileType
 
+//PathData2D ...
+type PathData2D []uint8
+
 // IsOutside checks if coords are outside of the dungeon space
 func (data *DungeonData) IsOutside(x, y int) bool {
 	return x < 0 || y < 0 || x > data.Width-1 || y > data.Height-1
+}
+
+func (data *DungeonData) ForEachTile(fun func(x, y int, tile TileType, data *DungeonData)) {
+
+	for x := 0; x < data.Width; x++ {
+		for y := 0; y < data.Height; y++ {
+			fun(x, y, data.Get(x, y), data)
+		}
+	}
 }
 
 //Set ...
@@ -73,7 +69,7 @@ func (data *DungeonData) Set(x int, y int, tile TileType) {
 }
 
 //SetPath ...
-func (data *DungeonData) SetPath(x int, y int, tile TileType) {
+func (data *DungeonData) SetPath(x int, y int, tile uint8) {
 
 	// ignore Set values out of bounds
 	if x < 0 || x >= data.Width || y < 0 || y >= data.Height {
@@ -83,7 +79,7 @@ func (data *DungeonData) SetPath(x int, y int, tile TileType) {
 }
 
 //SetRoomPath ...
-func (data *DungeonData) SetRoomPath(x, y, width, height int, tile TileType) {
+func (data *DungeonData) SetRoomPath(x, y, width, height int, tile uint8) {
 
 	// ignore Set va.ues out of bounds
 	if x < 0 || (x+width) > data.Width || y < 0 || (y+height) > data.Height {
@@ -100,7 +96,6 @@ func (data *DungeonData) SetRoomPath(x, y, width, height int, tile TileType) {
 func (data *DungeonData) FindRoomForCoord(x, y int) (*RoomData, error) {
 	for _, room := range data.Rooms {
 		if room.IsInside(x, y) {
-			// currently there should only be a single room at this coord
 			return room, nil
 		}
 	}
@@ -118,11 +113,11 @@ func (data *DungeonData) Get(x int, y int) TileType {
 }
 
 //GetPath ...
-func (data *DungeonData) GetPath(x int, y int) TileType {
+func (data *DungeonData) GetPath(x int, y int) uint8 {
 
 	// ignore Set values out of bounds
 	if x < 0 || x >= data.Width || y < 0 || y >= data.Height {
-		return -1
+		return 0
 	}
 	return data.PathData[x+y*data.Width]
 }
@@ -130,32 +125,26 @@ func (data *DungeonData) GetPath(x int, y int) TileType {
 //Init ...
 func (data *DungeonData) Init() {
 	data.MapData = make([]TileType, data.Width*data.Height)
-	data.PathData = make([]TileType, data.Width*data.Height)
+	data.PathData = make([]uint8, data.Width*data.Height)
 
 	for x := 0; x < data.Width; x++ {
 		for y := 0; y < data.Height; y++ {
 			data.Set(x, y, EmptyTileType)
-			data.SetPath(x, y, EmptyTileType)
+			data.SetPath(x, y, 0)
 		}
 	}
-}
-
-//Builder ..
-type Builder interface {
-	Build() *DungeonData
-	WithSmallSize() Builder
-	WithSize(width int, height int) Builder
-	WithCreationStrategy(strategy DungeonCreationStrategy) Builder
 }
 
 type defaultBuilder struct {
 	Data     *DungeonData
 	Strategy DungeonCreationStrategy
+	Mask     AreaMask
 }
 
 //DefaultBuilder ...
 func DefaultBuilder() Builder {
 	builder := &defaultBuilder{}
+	builder.Mask = &EmptyMask{}
 	builder.Data = &DungeonData{
 		Width:  100,
 		Height: 100,
@@ -167,6 +156,11 @@ func DefaultBuilder() Builder {
 	}
 	builder.Data.Width = 100
 	builder.Data.Height = 100
+	return builder
+}
+
+func (builder *defaultBuilder) WithMask(mask AreaMask) Builder {
+	builder.Mask = mask
 	return builder
 }
 
@@ -193,11 +187,15 @@ func (builder *defaultBuilder) Build() *DungeonData {
 	builder.Data.Init()
 
 	// Invoke strategy
-	builder.Strategy.Create(builder.Data, CircleMask{
-		Radius:  (builder.Data.Width / 2) - builder.Data.Width/10,
-		CenterX: builder.Data.Width / 2,
-		CenterY: builder.Data.Height / 2,
-	})
+	builder.Strategy.Create(builder.Data, builder.Mask)
+
+	/*
+		&CircleMask{
+			Radius:  (builder.Data.Width / 2) - builder.Data.Width/10,
+			CenterX: builder.Data.Width / 2,
+			CenterY: builder.Data.Height / 2,
+		}
+	*/
 
 	explorer := NewExplorer()
 	explorer.Explore(builder.Data)

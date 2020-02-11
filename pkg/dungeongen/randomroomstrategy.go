@@ -2,6 +2,7 @@ package dungeongen
 
 import (
 	"errors"
+	"log"
 	"math"
 	"math/rand"
 	"time"
@@ -107,14 +108,15 @@ func (strategy *RandomRoomStrategy) Create(data *DungeonData, mask AreaMask) {
 
 	// 1st Step: Create rooms
 	for i := 0; i < strategy.MaxRooms; i++ {
-		newRoom := strategy.createRandomRoom(data, mask)
 
-		if !strategy.roomCollidesWithExisting(data, newRoom) {
-			addRoomToDungeon(data, newRoom)
+		if newRoom, err := strategy.createRandomRoom(data, mask); err == nil {
+			if !strategy.roomCollidesWithExisting(data, newRoom) {
+				addRoomToDungeon(data, newRoom)
 
-			// (ChanceOfAdjacentRooms) chance to build the new room next to the old one
-			for i := 0; chanceInPercent(strategy.ChanceOfAdjacentRooms) && i < 5; i++ {
-				strategy.buildAdjacentRoom(data, newRoom)
+				// (ChanceOfAdjacentRooms) chance to build the new room next to the old one
+				for i := 0; chanceInPercent(strategy.ChanceOfAdjacentRooms) && i < 5; i++ {
+					strategy.buildAdjacentRoom(data, newRoom)
+				}
 			}
 		}
 	}
@@ -177,7 +179,6 @@ func (strategy *RandomRoomStrategy) Create(data *DungeonData, mask AreaMask) {
 
 					if connectedRoom, error := data.FindRoomForCoord(current.X, current.Y); error == nil {
 						if !connectedRoom.IsCorner(current.X, current.Y) {
-
 							foundDoor := false
 							// check if there is already a door 1 unit away
 							if abs(direction.X) == 1 {
@@ -210,13 +211,17 @@ func (strategy *RandomRoomStrategy) Create(data *DungeonData, mask AreaMask) {
 
 							// no door yet, add a new one at the current position
 							if !foundDoor {
-								data.Set(current.X, current.Y, DoorTileType)
-								connectedRoom.IsConnected = true
-								connectedRoom.AddDoor(wall, current)
+								connectedWall, err := connectedRoom.GetWallForPosition(current.X, current.Y)
+
+								if err == nil {
+									data.Set(current.X, current.Y, DoorTileType)
+									connectedRoom.IsConnected = true
+									connectedRoom.AddDoor(connectedWall, current)
+									room.IsConnected = true
+								} else {
+									log.Fatal("Found doortile not on wall")
+								}
 							}
-
-							room.IsConnected = true
-
 							// TODO create a passage between the two rooms
 						}
 					}
@@ -227,12 +232,16 @@ func (strategy *RandomRoomStrategy) Create(data *DungeonData, mask AreaMask) {
 					if connectedRoom, error := data.FindRoomForCoord(current.X, current.Y); error == nil {
 
 						if !connectedRoom.IsCorner(current.X, current.Y) {
-							data.Set(current.X, current.Y, DoorTileType)
-							connectedRoom.IsConnected = true
-							connectedRoom.AddDoor(wall, current)
-							room.IsConnected = true
-							// TODO create a passage between the two rooms
+							connectedWall, err := connectedRoom.GetWallForPosition(current.X, current.Y)
 
+							if err == nil {
+								connectedRoom.IsConnected = true
+								connectedRoom.AddDoor(connectedWall, current)
+								room.IsConnected = true
+							} else {
+								log.Fatal("Found doortile not on wall")
+							}
+							// TODO create a passage between the two rooms
 						}
 					}
 					break
@@ -423,7 +432,7 @@ func (strategy *RandomRoomStrategy) createDuplicateRoom(data *DungeonData, lastR
 	return NewRoomData(x, y, w, h), direction
 }
 
-func (strategy *RandomRoomStrategy) createRandomRoom(data *DungeonData, mask AreaMask) *RoomData {
+func (strategy *RandomRoomStrategy) createRandomRoom(data *DungeonData, mask AreaMask) (*RoomData, error) {
 
 	seed := time.Now().UnixNano()
 	r := rand.New(rand.NewSource(seed))
@@ -432,7 +441,7 @@ func (strategy *RandomRoomStrategy) createRandomRoom(data *DungeonData, mask Are
 	isInside := false
 
 	// max trys?
-	for !isInside {
+	for i := 0; i < 5 && !isInside; i++ {
 		w = max(strategy.MinRoomWidth, r.Int()%strategy.MaxRoomWidth)
 		h = max(strategy.MinRoomHeight, r.Int()%strategy.MaxRoomHeight)
 		x = max(0, (r.Int()%data.Width - w))
@@ -441,5 +450,9 @@ func (strategy *RandomRoomStrategy) createRandomRoom(data *DungeonData, mask Are
 		isInside = mask.IsInside(x, y) && mask.IsInside(x+w, y) && mask.IsInside(x, y+h) && mask.IsInside(x+w, y+h)
 	}
 
-	return NewRoomData(x, y, w, h)
+	if isInside {
+		return NewRoomData(x, y, w, h), nil
+	}
+
+	return nil, errors.New("could not create random room")
 }
